@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rastreabilidade do Lote - EcoBite</title>
+    <!-- Inclui Tailwind CSS para estilização rápida e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        /* Paleta de Cores EcoBite */
+        :root {
+            --color-primary: #FCE400; /* Amarelo Vibrante */
+            --color-secondary: #000080; /* Azul Escuro (Navy) */
+            --color-text: #1F2937; /* Cinza Escuro */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb;
+        }
+        .bg-primary { background-color: var(--color-primary); }
+        .text-secondary { color: var(--color-secondary); }
+        .border-secondary { border-color: var(--color-secondary); }
+        .ring-secondary:focus {
+             --tw-ring-color: var(--color-secondary);
+        }
+        .shadow-eco {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 sm:p-8">
+
+    <!-- Container Principal -->
+    <div class="w-full max-w-4xl bg-white rounded-xl shadow-eco overflow-hidden">
+        
+        <!-- Header da Marca -->
+        <header class="bg-primary p-6 sm:p-8 text-center rounded-t-xl">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-secondary tracking-tight">
+                Eco<span class="font-normal">Bite</span>
+            </h1>
+            <p class="text-secondary mt-1 text-lg sm:text-xl font-medium">Transparência Total: Rastreie o seu Lote</p>
+        </header>
+
+        <!-- Seção de Pesquisa -->
+        <section class="p-6 sm:p-8 border-b border-gray-100">
+            <div class="flex flex-col sm:flex-row gap-4">
+                <input type="text" id="loteInput" placeholder="Introduza o Nº do Lote (ex: EB2025-07B, EB2025-10C, EB2025-12A)" 
+                       class="flex-grow p-3 border-2 border-secondary rounded-lg focus:outline-none focus:ring-2 ring-secondary transition duration-150 text-gray-700">
+                <button id="rastrearBtn" onclick="rastrearLote()" 
+                        class="bg-secondary text-white font-bold py-3 px-6 rounded-lg hover:bg-opacity-90 transition duration-150 shadow-md">
+                    RASTREAR LOTE
+                </button>
+            </div>
+            <p id="errorMsg" class="text-red-500 mt-2 font-medium hidden">Por favor, insira um número de lote válido.</p>
+        </section>
+
+        <!-- Seção de Resultados -->
+        <section id="resultsSection" class="p-6 sm:p-8">
+            <h2 id="resultsTitle" class="text-2xl font-bold text-gray-800 mb-6 hidden"></h2>
+            
+            <!-- Indicador de Carregamento -->
+            <div id="loadingIndicator" class="text-center py-10 hidden">
+                <div class="animate-spin inline-block w-8 h-8 border-4 rounded-full border-secondary border-t-transparent"></div>
+                <p class="mt-3 text-secondary font-medium">A carregar o relatório de impacto...</p>
+            </div>
+
+            <!-- Detalhes do Relatório -->
+            <div id="reportDetails" class="space-y-8 hidden">
+                <!-- Origem dos Ingredientes -->
+                <div class="border-l-4 border-primary pl-4">
+                    <h3 class="text-xl font-bold text-secondary mb-3 flex items-center">
+                        <span class="mr-2">🌱</span> Origem dos Ingredientes
+                    </h3>
+                    <ul id="origemList" class="list-none space-y-2 text-gray-700">
+                        <!-- Conteúdo injetado pelo JS -->
+                    </ul>
+                </div>
+
+                <!-- Impacto Ambiental -->
+                <div class="border-l-4 border-primary pl-4">
+                    <h3 class="text-xl font-bold text-secondary mb-3 flex items-center">
+                        <span class="mr-2">🌍</span> Impacto Ambiental (Circularidade)
+                    </h3>
+                    <div id="impactoGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Conteúdo injetado pelo JS -->
+                    </div>
+                </div>
+
+                <!-- Segurança e Qualidade -->
+                <div class="border-l-4 border-primary pl-4">
+                    <h3 class="text-xl font-bold text-secondary mb-3 flex items-center">
+                        <span class="mr-2">✅</span> Segurança e Qualidade
+                    </h3>
+                    <ul id="segurancaList" class="list-none space-y-2 text-gray-700">
+                        <!-- Conteúdo injetado pelo JS -->
+                    </ul>
+                </div>
+
+                <!-- Chamada à Ação -->
+                <div class="bg-gray-50 p-6 rounded-lg text-center mt-10">
+                    <p class="text-lg font-medium text-gray-800">
+                        Obrigado por escolher a sustentabilidade! 
+                        Ao comprar EcoBite, está ativamente a reduzir o desperdício alimentar.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        const loteInput = document.getElementById('loteInput');
+        const rastrearBtn = document.getElementById('rastrearBtn');
+        const resultsTitle = document.getElementById('resultsTitle');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const reportDetails = document.getElementById('reportDetails');
+        const errorMsg = document.getElementById('errorMsg');
+        const origemList = document.getElementById('origemList');
+        const impactoGrid = document.getElementById('impactoGrid');
+        const segurancaList = document.getElementById('segurancaList');
+
+        // Dados de rastreabilidade para vários lotes
+        const lotesData = {
+            'EB2025-07B': { // Ração Seca
+                dataProducao: '2025-11-25',
+                dataValidade: '2026-11-25',
+                produto: 'Ração Seca',
+                statusQualidade: 'Aprovado (Testes microbiológicos e nutricionais concluídos)',
+                origem: [
+                    { ingrediente: 'Frango (Excedente)', fornecedor: 'Aviário Lda.', local: 'Porto', motivo: 'Excesso de stock' },
+                    { ingrediente: 'Grãos (Arroz)', fornecedor: 'Cooperativa Agrícola Sul', local: 'Alentejo', motivo: 'Embalagens danificadas' },
+                    { ingrediente: 'Vegetais (Cenoura/Abóbora)', fornecedor: 'Horta Fresca Local', local: 'Mafra', motivo: 'Imperfeições estéticas' }
+                ],
+                impacto: {
+                    kgSalvados: 425.5,
+                    co2Evitado: 180, // Equivalente em kg de CO2
+                    aguaPoupada: 5500, // Equivalente em litros de água
+                }
+            },
+            'EB2025-10C': { // Snacks Naturais
+                dataProducao: '2025-12-01',
+                dataValidade: '2026-06-01',
+                produto: 'Snacks Naturais',
+                statusQualidade: 'Aprovado (Verificação de textura e segurança alimentar concluída)',
+                origem: [
+                    { ingrediente: 'Fruta (Maçã/Pêra)', fornecedor: 'Pomares do Oeste', local: 'Alcobaça', motivo: 'Tamanho e forma fora do padrão' },
+                    { ingrediente: 'Legumes (Batata Doce)', fornecedor: 'Quinta Biológica', local: 'Guarda', motivo: 'Rendimento da colheita inesperado' },
+                    { ingrediente: 'Proteína Vegetal', fornecedor: 'Processamento de Grãos Lda.', local: 'Lisboa', motivo: 'Sobras de produção de farinha' }
+                ],
+                impacto: {
+                    kgSalvados: 120.8,
+                    co2Evitado: 45,
+                    aguaPoupada: 1500,
+                }
+            },
+            'EB2025-12A': { // Ração Húmida (Lata)
+                dataProducao: '2025-12-15',
+                dataValidade: '2027-12-15',
+                produto: 'Ração Húmida (Lata)',
+                statusQualidade: 'Aprovado (Testes de esterilização e pH concluídos)',
+                origem: [
+                    { ingrediente: 'Carne de Porco', fornecedor: 'Matadouro Regional', local: 'Évora', motivo: 'Cortes não adequados para consumo humano' },
+                    { ingrediente: 'Caldo de Cozedura', fornecedor: 'Fábrica de Sopas Lda.', local: 'Coimbra', motivo: 'Excedente de caldo rico em nutrientes' },
+                    { ingrediente: 'Vegetais', fornecedor: 'Mercado Local', local: 'Setúbal', motivo: 'Produtos perto do prazo de venda' }
+                ],
+                impacto: {
+                    kgSalvados: 890.2,
+                    co2Evitado: 350,
+                    aguaPoupada: 9800,
+                }
+            }
+        };
+
+
+        // Função que simula a chamada à API de rastreabilidade
+        function simularRastreabilidade(lote) {
+            const data = lotesData[lote];
+            if (!data) {
+                return null; // Lote não encontrado
+            }
+            // Adiciona o número do lote aos dados
+            return { ...data, lote };
+
+            // Simula um delay de rede de 1.5 segundos
+            // return new Promise(resolve => {
+            //     setTimeout(() => resolve(data), 1500);
+            // });
+        }
+
+        async function rastrearLote() {
+            const lote = loteInput.value.trim().toUpperCase(); // Normaliza para maiúsculas
+            
+            // 1. Validação
+            errorMsg.classList.add('hidden');
+            if (!lotesData[lote]) {
+                errorMsg.textContent = "Lote não encontrado. Por favor, verifique o número e tente novamente (ex: EB2025-07B, EB2025-10C, EB2025-12A).";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            // Limpar resultados anteriores
+            resultsTitle.classList.add('hidden');
+            reportDetails.classList.add('hidden');
+            origemList.innerHTML = '';
+            impactoGrid.innerHTML = '';
+            segurancaList.innerHTML = '';
+            
+            // 2. Estado de Carregamento
+            rastrearBtn.disabled = true;
+            rastrearBtn.textContent = 'A RASTREAR...';
+            loadingIndicator.classList.remove('hidden');
+
+            try {
+                // 3. Busca de Dados
+                // Note: Removida a simulação de Promise/delay para simplificar
+                const relatorio = simularRastreabilidade(lote);
+
+                if (!relatorio) {
+                     errorMsg.textContent = "Lote não encontrado. Por favor, verifique o número e tente novamente.";
+                     errorMsg.classList.remove('hidden');
+                     return;
+                }
+
+                // 4. Renderização dos Resultados
+                
+                // Título
+                resultsTitle.textContent = `Relatório de Rastreabilidade (Produto: ${relatorio.produto}) para o Lote: ${relatorio.lote}`;
+                resultsTitle.classList.remove('hidden');
+
+                // Origem dos Ingredientes
+                relatorio.origem.forEach(item => {
+                    origemList.innerHTML += `
+                        <li class="bg-gray-50 p-3 rounded-lg border-l-2 border-secondary">
+                            <span class="font-semibold">${item.ingrediente}</span>, de ${item.fornecedor} (${item.local}). <br> 
+                            <span class="text-sm text-gray-500">Motivo de salvamento: ${item.motivo}.</span>
+                        </li>
+                    `;
+                });
+                
+                // Impacto Ambiental
+                const impactoData = [
+                    { label: 'Desperdício Alimentar Salvo', value: `${relatorio.impacto.kgSalvados} kg`, icon: '🗑️' },
+                    { label: 'CO2 Não Emitido', value: `${relatorio.impacto.co2Evitado} kg`, icon: '💨' },
+                    { label: 'Água Poupada', value: `${relatorio.impacto.aguaPoupada} Litros`, icon: '💧' }
+                ];
+
+                impactoData.forEach(item => {
+                    impactoGrid.innerHTML += `
+                        <div class="bg-primary bg-opacity-30 p-4 rounded-lg text-center">
+                            <p class="text-4xl mb-1">${item.icon}</p>
+                            <p class="text-xl sm:text-2xl font-extrabold text-secondary">${item.value}</p>
+                            <p class="text-sm text-gray-700 font-medium">${item.label}</p>
+                        </div>
+                    `;
+                });
+
+                // Segurança e Qualidade
+                segurancaList.innerHTML += `
+                    <li class="p-2 border-b">Data de Produção: <span class="font-semibold">${relatorio.dataProducao}</span></li>
+                    <li class="p-2 border-b">Data de Validade: <span class="font-semibold">${relatorio.dataValidade}</span></li>
+                    <li class="p-2">Status de Qualidade: <span class="font-semibold text-green-600">${relatorio.statusQualidade}</span></li>
+                `;
+
+                // Mostrar relatório
+                reportDetails.classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Erro ao rastrear o lote:", error);
+                errorMsg.textContent = "Erro ao carregar o relatório. Por favor, tente novamente mais tarde.";
+                errorMsg.classList.remove('hidden');
+            } finally {
+                // 5. Resetar Estado
+                loadingIndicator.classList.add('hidden');
+                rastrearBtn.disabled = false;
+                rastrearBtn.textContent = 'RASTREAR LOTE';
+            }
+        }
+
+        // Simula o rastreamento automático para demonstração ao carregar
+        window.onload = () => {
+             // Define o lote de demonstração inicial no input
+             loteInput.value = 'EB2025-07B'; 
+             // Chama a função para carregar o primeiro lote
+             // Nota: Não faz uma chamada imediata para que o usuário possa ver a instrução de lote no placeholder.
+        };
+
+    </script>
+</body>
+</html>
